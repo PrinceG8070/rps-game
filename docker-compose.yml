@@ -1,0 +1,56 @@
+services:
+  # 1. MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: rps-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Prince@123
+      MYSQL_DATABASE: rps_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pPrince@123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Kotlin Spring Boot Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ghcr.io/princeg8070/rps-backend:latest
+    container_name: rps-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: rps_db
+      DB_USERNAME: root
+      DB_PASSWORD: Prince@123
+      PORT: 8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # 3. React 19 Frontend (Nginx) Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: ghcr.io/princeg8070/rps-frontend:latest
+    container_name: rps-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+    driver: local
